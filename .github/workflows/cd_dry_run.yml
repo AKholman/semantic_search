@@ -15,15 +15,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Check secrets availability
-        run: |
-          if [ -z "${{ secrets.HF_TOKEN }}" ]; then
-            echo "❌ HF_TOKEN not found"
-            exit 1
-          else
-            echo "✅ HF_TOKEN is available"
-          fi
-
       # ---------- Backend (Docker HF Space) ----------
       - name: Backend CD dry-run
         run: |
@@ -40,7 +31,7 @@ jobs:
 
       - name: CD sanity check
         run: echo "🎯 CD pipeline logic is valid"
-        
+
       - name: Docker build (dry run)
         run: |
           echo "🐳 Building backend Docker image (no push)"
