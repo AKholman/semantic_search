@@ -7,6 +7,7 @@ on:
       - frontend/**
 
 env:
+  # This must match your actual Hugging Face Space repository name
   HF_SPACE_NAME: nlp-semantic-search-frontend
 
 jobs:
@@ -17,20 +18,22 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Clone HF backend Space (authenticated)
+      - name: Clone HF frontend Space (authenticated)
+        # CRITICAL FIX: Use the correct variable HF_SPACE_NAME and embed the token
         run: |
-          git clone https://:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Alex-Khol/${TARGET_DIR}
+          git clone https://:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Alex-Khol/${{ env.HF_SPACE_NAME }}
 
 
       - name: Sync frontend to HF Space
         run: |
+          # Sync all contents of the local frontend/ folder into the root of the cloned Space
           rsync -av --delete \
             --exclude '.git' \
-            frontend/ ${HF_SPACE_NAME}/
+            frontend/ ${{ env.HF_SPACE_NAME }}/
 
       - name: Commit and push to HF
         run: |
-          cd ${HF_SPACE_NAME}
+          cd ${{ env.HF_SPACE_NAME }}
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add .

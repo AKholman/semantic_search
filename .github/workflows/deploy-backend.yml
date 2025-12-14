@@ -4,10 +4,12 @@ on:
   push:
     branches: [ main ]
     paths:
+      # Trigger if anything in backend/ changes, OR if the top-level requirements.txt changes
       - backend/**
       - requirements.txt
 
 env:
+  # This must match your actual Hugging Face Space repository name
   HF_SPACE_NAME: nlp-semantic-search-backend
 
 jobs:
@@ -19,20 +21,28 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Clone HF backend Space (authenticated)
+        # CRITICAL FIX: Use the correct variable HF_SPACE_NAME and embed the token
         run: |
-          git clone https://:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Alex-Khol/${TARGET_DIR}
+          git clone https://:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Alex-Khol/${{ env.HF_SPACE_NAME }}
 
       - name: Sync backend + root requirements to HF Space
         run: |
+          # 1. Sync the backend code (app_core.py, etc.) into the cloned folder's root
           rsync -av --delete \
             --exclude '.git' \
-            backend/ ${HF_SPACE_NAME}/backend/
+            backend/ ${{ env.HF_SPACE_NAME }}/
 
-          cp requirements.txt ${HF_SPACE_NAME}/requirements.txt
+          # 2. Copy the top-level requirements.txt into the cloned folder's root
+          # This is required for the Docker build to find it (COPY requirements.txt .)
+          cp requirements.txt ${{ env.HF_SPACE_NAME }}/requirements.txt
+          
+          # 3. Ensure your Dockerfile is also in the root of the cloned Space (if it's not already)
+          # Assuming you have a Dockerfile at the root of your local repository, copy it:
+          # cp Dockerfile ${{ env.HF_SPACE_NAME }}/Dockerfile
 
       - name: Commit and push to HF
         run: |
-          cd ${HF_SPACE_NAME}
+          cd ${{ env.HF_SPACE_NAME }}
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add .
