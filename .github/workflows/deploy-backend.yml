@@ -32,17 +32,19 @@ jobs:
 
       - name: Sync backend + root requirements to HF Space
         run: |
-          # 1. Sync the backend code (app_core.py, etc.) into the cloned folder's root
+          # 1. Sync the backend code (app_core.py, Dockerfile, etc.) into the cloned folder's root
+          # This handles all files inside the backend/ directory.
           rsync -av --delete \
             --exclude '.git' \
             backend/ ${{ env.HF_SPACE_NAME }}/
 
           # 2. Copy the top-level requirements.txt into the cloned folder's root
           # This is required for the Docker build to find it (COPY requirements.txt .)
+          # NOTE: We keep this because requirements.txt is in the repository root, not backend/.
           cp requirements.txt ${{ env.HF_SPACE_NAME }}/requirements.txt
           
-          # 3. Assuming your Dockerfile is in the root of your project, copy it to the Space's root:
-          cp Dockerfile ${{ env.HF_SPACE_NAME }}/Dockerfile
+          # 3. DELETE/REMOVE THE FOLLOWING LINE:
+          # cp Dockerfile ${{ env.HF_SPACE_NAME }}/Dockerfile
 
       - name: Commit and push to HF
         run: |
