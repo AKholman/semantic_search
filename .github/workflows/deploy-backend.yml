@@ -4,7 +4,11 @@ on:
   push:
     branches: [ main ]
     paths:
-      # Trigger if anything in backend/ changes, OR if the top-level requirements.txt changes
+      # CRITICAL ADDITION: Triggers the workflow if the workflow file itself changes 
+      # (ensures it appears in the Actions list alongside the frontend).
+      - '.github/workflows/**' 
+      
+      # Primary triggers for backend code changes
       - backend/**
       - requirements.txt
 
@@ -21,9 +25,10 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Clone HF backend Space (authenticated)
-        # CRITICAL FIX: Use the correct variable HF_SPACE_NAME and embed the token
+        # CRITICAL FIX: Embeds the token in the URL for reliable authentication
         run: |
-          git clone https://:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Alex-Khol/${{ env.HF_SPACE_NAME }}
+          TARGET="${{ env.HF_SPACE_NAME }}"
+          git clone https://:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Alex-Khol/${TARGET}
 
       - name: Sync backend + root requirements to HF Space
         run: |
@@ -36,9 +41,8 @@ jobs:
           # This is required for the Docker build to find it (COPY requirements.txt .)
           cp requirements.txt ${{ env.HF_SPACE_NAME }}/requirements.txt
           
-          # 3. Ensure your Dockerfile is also in the root of the cloned Space (if it's not already)
-          # Assuming you have a Dockerfile at the root of your local repository, copy it:
-          # cp Dockerfile ${{ env.HF_SPACE_NAME }}/Dockerfile
+          # 3. Assuming your Dockerfile is in the root of your project, copy it to the Space's root:
+          cp Dockerfile ${{ env.HF_SPACE_NAME }}/Dockerfile
 
       - name: Commit and push to HF
         run: |
