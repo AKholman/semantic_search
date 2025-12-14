@@ -1,0 +1,51 @@
+# ------------------------------------
+# 1. Virtual Environment (Local & Conda)
+# ------------------------------------
+venv/
+local_env/
+nlp_new_env/
+semantic_search_env/  # Your new, clean Conda environment name
+
+# Conda environment files often placed in the root
+# Note: You should generally avoid committing environment.yml, 
+# but if it's there and you use a different name, ignore the folder.
+environment.yml
+*.lock
+
+# ------------------------------------
+# 2. Python Cache and Compiled Files
+# ------------------------------------
+__pycache__/
+*.pyc
+*.pyd
+*.so # Shared object files (sometimes compiled during installation)
+
+# ------------------------------------
+# 3. FAISS/Model Files (Crucial for ML Projects)
+# ------------------------------------
+# FAISS index files (these are large and should NOT be version controlled)
+*.faiss
+*.idx
+
+# Log files created during model runs
+*.log
+*.err
+
+# Saved models/checkpoints
+*.pt
+*.pth
+*.h5
+
+# ------------------------------------
+# 4. IDE and Editor Specific Files
+# ------------------------------------
+.vscode/
+.idea/
+.DS_Store # macOS system file
+
+# ------------------------------------
+# 5. Build and Distribution Artifacts
+# ------------------------------------
+dist/
+build/
+*.egg-info/
