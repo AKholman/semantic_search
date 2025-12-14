@@ -35,5 +35,4 @@ jobs:
       - name: Docker build (dry run)
         run: |
           echo "🐳 Building backend Docker image (no push)"
-          docker build -t backend-cd-test ./backend
-          echo "✅ Docker build succeeded"
+          docker build -t backend-cd-test -f backend/Dockerfile .

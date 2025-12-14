@@ -18,14 +18,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Login to Hugging Face
+      - name: Clone HF backend Space (authenticated)
         run: |
-          git config --global credential.helper store
-          echo "https://Alex-Khol:${{ secrets.HF_TOKEN }}@huggingface.co" > ~/.git-credentials
-
-      - name: Clone HF backend Space
-        run: |
-          git clone https://huggingface.co/spaces/Alex-Khol/${HF_SPACE_NAME}
+          git clone https://Alex-Khol:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Alex-Khol/${HF_SPACE_NAME}
 
       - name: Sync backend + root requirements to HF Space
         run: |
