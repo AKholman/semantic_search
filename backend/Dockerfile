@@ -2,11 +2,13 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-COPY backend/requirements.txt .
+# Copy root requirements.txt
+COPY requirements.txt .
+
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY backend .
+# Copy backend source code
+COPY backend/ .
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
-
-
+# app_core.py contains: app = FastAPI()
+CMD ["uvicorn", "app_core:app", "--host", "0.0.0.0", "--port", "7860"]

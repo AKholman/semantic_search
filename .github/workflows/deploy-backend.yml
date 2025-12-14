@@ -1,0 +1,45 @@
+name: Deploy Backend to HF Docker Space
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - backend/**
+      - requirements.txt
+
+env:
+  HF_SPACE_NAME: nlp-semantic-search-backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Login to Hugging Face
+        run: |
+          git config --global credential.helper store
+          echo "https://user:${{ secrets.HF_TOKEN }}@huggingface.co" > ~/.git-credentials
+
+      - name: Clone HF backend Space
+        run: |
+          git clone https://huggingface.co/spaces/Alex-Khol/${HF_SPACE_NAME}
+
+      - name: Sync backend + root requirements to HF Space
+        run: |
+          rsync -av --delete \
+            --exclude '.git' \
+            backend/ ${HF_SPACE_NAME}/backend/
+
+          cp requirements.txt ${HF_SPACE_NAME}/requirements.txt
+
+      - name: Commit and push to HF
+        run: |
+          cd ${HF_SPACE_NAME}
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git diff --quiet || git commit -m "Deploy FastAPI backend (Docker)"
+          git push
