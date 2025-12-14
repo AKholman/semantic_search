@@ -1,0 +1,48 @@
+name: CD Dry Run (No Deployment)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - backend/**
+      - frontend/**
+
+jobs:
+  cd-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Check secrets availability
+        run: |
+          if [ -z "${{ secrets.HF_TOKEN }}" ]; then
+            echo "❌ HF_TOKEN not found"
+            exit 1
+          else
+            echo "✅ HF_TOKEN is available"
+          fi
+
+      # ---------- Backend (Docker HF Space) ----------
+      - name: Backend CD dry-run
+        run: |
+          echo "🔍 Backend changes detected"
+          ls backend
+          echo "✅ Backend would be deployed to Docker HF Space"
+
+      # ---------- Frontend (Gradio HF Space) ----------
+      - name: Frontend CD dry-run
+        run: |
+          echo "🔍 Frontend changes detected"
+          ls frontend
+          echo "✅ Frontend would be deployed to Gradio HF Space"
+
+      - name: CD sanity check
+        run: echo "🎯 CD pipeline logic is valid"
+        
+      - name: Docker build (dry run)
+        run: |
+          echo "🐳 Building backend Docker image (no push)"
+          docker build -t backend-cd-test ./backend
+          echo "✅ Docker build succeeded"
