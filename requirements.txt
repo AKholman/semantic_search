@@ -2,7 +2,6 @@
 fastapi
 uvicorn[standard]
 
-
 # --- NLP & embeddings ---
 sentence-transformers
 numpy
