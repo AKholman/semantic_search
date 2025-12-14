@@ -4,7 +4,17 @@ on:
   push:
     branches: [ main ]
     paths:
+      # 1. Primary trigger for frontend code changes
       - frontend/**
+      
+      # 2. Add global configuration files that might affect the frontend
+      # (e.g., if you use requirements.txt in the frontend Space)
+      - requirements.txt
+      - frontend/frontend_requirements.txt # Assuming this is used locally
+
+      # 3. CRITICAL ADDITION: Triggers the workflow if the workflow file itself changes,
+      # or if the backend workflow file changes (ensures both appear in the Actions list).
+      - '.github/workflows/**'
 
 env:
   # This must match your actual Hugging Face Space repository name
@@ -27,6 +37,8 @@ jobs:
       - name: Sync frontend to HF Space
         run: |
           # Sync all contents of the local frontend/ folder into the root of the cloned Space
+          # Note: If your frontend Space requires requirements.txt to be in its root, 
+          # you should include a cp step here as well.
           rsync -av --delete \
             --exclude '.git' \
             frontend/ ${{ env.HF_SPACE_NAME }}/
