@@ -1,0 +1,27 @@
+name: CI Check (No Deployment)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Verify folder structure
+        run: |
+          echo "Listing repository contents"
+          ls -la
+          echo "Frontend:"
+          ls frontend || echo "No frontend folder"
+          echo "Backend:"
+          ls backend || echo "No backend folder"
+
+      - name: CI sanity check
+        run: |
+          echo "CI is working correctly 🎉"
