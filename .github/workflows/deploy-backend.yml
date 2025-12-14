@@ -21,7 +21,7 @@ jobs:
       - name: Login to Hugging Face
         run: |
           git config --global credential.helper store
-          echo "https://user:${{ secrets.HF_TOKEN }}@huggingface.co" > ~/.git-credentials
+          echo "https://Alex-Khol:${{ secrets.HF_TOKEN }}@huggingface.co" > ~/.git-credentials
 
       - name: Clone HF backend Space
         run: |
