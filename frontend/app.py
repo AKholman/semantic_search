@@ -7,7 +7,7 @@ import time
 # -----------------------------
 # Backend URL (UPDATED FOR NEW SPACE SUBDOMAIN)
 # -----------------------------
-BACKEND_URL = "https://Alex-Khol-semantic-search-customer-support-backend.hf.space/search"
+BACKEND_URL = "https://Alex-Khol-nlp-semantic-search-backend.hf.space/search"
 
 # -----------------------------
 # Function to call backend API
