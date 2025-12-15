@@ -34,7 +34,7 @@ jobs:
           git clone https://:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Alex-Khol/${{ env.HF_SPACE_NAME }}
 
 
-      - name: DEBUG: List Files Before Sync
+      - name: 'DEBUG: List Files Before Sync'
         # This step will show us if the GitHub Action runner can see your local files.
         run: |
           echo "--- Listing contents of the repository root: ---"
