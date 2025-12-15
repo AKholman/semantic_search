@@ -41,7 +41,7 @@ __pycache__/
 # ------------------------------------
 .vscode/
 .idea/
-.DS_Store # macOS system file
+.DS_Store
 
 # ------------------------------------
 # 5. Build and Distribution Artifacts
@@ -49,3 +49,4 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+NLP_customer_support.ipynb
