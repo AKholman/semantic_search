@@ -1,0 +1,66 @@
+name: Deploy Backend & Frontend to HF Spaces
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - backend/**
+      - frontend/**
+      - requirements.txt
+      - frontend/frontend_requirements.txt
+
+env:
+  HF_BACKEND_SPACE: nlp-semantic-search-backend
+  HF_FRONTEND_SPACE: nlp-semantic-search-frontend
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Clone HF backend Space
+        run: |
+          git clone https://:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Alex-Khol/${{ env.HF_BACKEND_SPACE }}
+
+      - name: Sync backend files
+        run: |
+          rsync -av --delete --exclude '.git' backend/ ${{ env.HF_BACKEND_SPACE }}/
+          cp requirements.txt ${{ env.HF_BACKEND_SPACE }}/requirements.txt
+          # If you have a Dockerfile in the repo root:
+          cp Dockerfile ${{ env.HF_BACKEND_SPACE }}/Dockerfile || echo "No Dockerfile to copy"
+
+      - name: Commit and push backend
+        run: |
+          cd ${{ env.HF_BACKEND_SPACE }}
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git diff --quiet || git commit -m "Deploy backend via CI"
+          git push
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Clone HF frontend Space
+        run: |
+          git clone https://:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Alex-Khol/${{ env.HF_FRONTEND_SPACE }}
+
+      - name: Sync frontend files
+        run: |
+          rsync -av --delete --exclude '.git' frontend/ ${{ env.HF_FRONTEND_SPACE }}/
+          # HF requires the main requirements file to be named 'requirements.txt'
+          mv ${{ env.HF_FRONTEND_SPACE }}/frontend_requirements.txt ${{ env.HF_FRONTEND_SPACE }}/requirements.txt
+
+      - name: Commit and push frontend
+        run: |
+          cd ${{ env.HF_FRONTEND_SPACE }}
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git diff --quiet || git commit -m "Deploy frontend via CI"
+          git push
