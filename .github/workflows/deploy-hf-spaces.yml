@@ -23,7 +23,7 @@ jobs:
       - name: Clone HF backend Space
         run: |
           git clone https://:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Alex-Khol/${{ env.HF_BACKEND_SPACE }}
-
+          
       - name: Sync backend files
         run: |
           rsync -av --delete --exclude '.git' backend/ ${{ env.HF_BACKEND_SPACE }}/
