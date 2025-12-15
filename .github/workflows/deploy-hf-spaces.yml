@@ -45,41 +45,41 @@ jobs:
           git diff --quiet || git commit -m "Deploy backend via CI"
           git push
 
-deploy-frontend:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v3
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
 
-    - name: Clone HF frontend Space
-      run: |
-        git clone https://:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Alex-Khol/nlp-semantic-search-frontend
+      - name: Clone HF frontend Space
+        run: |
+          git clone https://:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Alex-Khol/nlp-semantic-search-frontend
 
-    - name: Debug frontend source
-      run: |
-        echo "==== GitHub repo frontend folder ===="
-        ls -la frontend
+      - name: Debug frontend source
+        run: |
+          echo "==== GitHub repo frontend folder ===="
+          ls -la frontend
 
-    - name: Sync frontend files (SAFE)
-      run: |
-        rsync -av frontend/ nlp-semantic-search-frontend/
+      - name: Sync frontend files (SAFE)
+        run: |
+          rsync -av frontend/ nlp-semantic-search-frontend/
 
-        # Rename requirements if needed
-        if [ -f nlp-semantic-search-frontend/frontend_requirements.txt ]; then
-          mv nlp-semantic-search-frontend/frontend_requirements.txt \
-             nlp-semantic-search-frontend/requirements.txt
-        fi
+          # Rename requirements if needed
+          if [ -f nlp-semantic-search-frontend/frontend_requirements.txt ]; then
+            mv nlp-semantic-search-frontend/frontend_requirements.txt \
+              nlp-semantic-search-frontend/requirements.txt
+          fi
 
-    - name: Debug HF Space contents
-      run: |
-        echo "==== HF Space folder ===="
-        ls -la nlp-semantic-search-frontend
+      - name: Debug HF Space contents
+        run: |
+         echo "==== HF Space folder ===="
+         ls -la nlp-semantic-search-frontend
 
-    - name: Commit and push frontend
-      run: |
-        cd nlp-semantic-search-frontend
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
-        git add .
-        git status
-        git diff --quiet || git commit -m "Deploy Gradio frontend"
-        git push
+      - name: Commit and push frontend
+        run: |
+         cd nlp-semantic-search-frontend
+         git config user.name "github-actions"
+         git config user.email "github-actions@github.com"
+         git add .
+         git status
+         git diff --quiet || git commit -m "Deploy Gradio frontend"
+         git push
