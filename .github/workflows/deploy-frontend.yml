@@ -36,12 +36,15 @@ jobs:
 
       - name: Sync frontend to HF Space
         run: |
+          # 1. Clean the target folder (Hugging Face Space clone) first to guarantee fresh copy
+          # This step is often overkill, but guarantees we aren't dealing with stale files.
+          # We skip this for now, but focus on the rsync path.
+
           # Sync all contents of the local frontend/ folder into the root of the cloned Space
-          # Note: If your frontend Space requires requirements.txt to be in its root, 
-          # you should include a cp step here as well.
+          # CRITICAL CHANGE: Using './frontend/' ensures the path is explicit from the root of the checkout.
           rsync -av --delete \
             --exclude '.git' \
-            frontend/ ${{ env.HF_SPACE_NAME }}/
+            ./frontend/ ${{ env.HF_SPACE_NAME }}/
 
       - name: Commit and push to HF
         run: |
