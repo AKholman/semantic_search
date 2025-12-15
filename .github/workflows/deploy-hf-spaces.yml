@@ -31,6 +31,11 @@ jobs:
           # If you have a Dockerfile in the repo root:
           cp Dockerfile ${{ env.HF_BACKEND_SPACE }}/Dockerfile || echo "No Dockerfile to copy"
 
+      - name: DEBUG – list backend Space contents
+        run: |
+          echo "==== Backend Space contents ===="
+          ls -R ${{ env.HF_BACKEND_SPACE }}
+
       - name: Commit and push backend
         run: |
           cd ${{ env.HF_BACKEND_SPACE }}
