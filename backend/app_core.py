@@ -6,23 +6,16 @@ import numpy as np
 import faiss
 from sentence_transformers import SentenceTransformer
 from pathlib import Path
+from contextlib import asynccontextmanager
 import os
 
 # -----------------------------
-# FastAPI app
-# -----------------------------
-app = FastAPI(
-    title="Customer Support Semantic Search API",
-    description="FastAPI + FAISS semantic search (HF Spaces friendly)",
-    version="1.2",
-)
-
-# -----------------------------
-# Request model
-# -----------------------------
-class QueryRequest(BaseModel):
-    query: str
-    top_k: int = 3
+# Lazy-loaded globals (Model, Index, and Answers)
+# We will use the app.state object to share them, but globals are needed for
+# the lifespan function scope
+model_instance = None
+faiss_index_instance = None
+answers_array_instance = None
 
 # -----------------------------
 # Paths (HF Spaces persistent storage)
@@ -32,26 +25,15 @@ EMBEDDINGS_DIR = BASE_DIR / "embeddings"
 ANSWERS_PATH = EMBEDDINGS_DIR / "answers.npy"
 FAISS_INDEX_PATH = EMBEDDINGS_DIR / "faiss_index.index"
 
-# Ensure directory exists
+# Ensure directory exists (This should run at module load)
 EMBEDDINGS_DIR.mkdir(parents=True, exist_ok=True)
 
 # -----------------------------
-# Lazy-loaded globals
-# -----------------------------
-model = None
-index = None
-answers = None
-
-# -----------------------------
-# Example seed data (replace later)
+# Example seed data (MUST BE DEFINED HERE)
 # -----------------------------
 def load_seed_data():
     """
-    Replace this with:
-    - Wikidata
-    - FAQ CSV
-    - Database
-    - JSON knowledge base
+    Replace this with your final data source.
     """
     return [
         "You can reset your password from the settings page.",
@@ -62,65 +44,102 @@ def load_seed_data():
     ]
 
 # -----------------------------
-# Build embeddings (RUNS ONCE)
+# Build embeddings (RUNS ONLY IF FILES ARE MISSING)
 # -----------------------------
 def build_embeddings():
-    global model, index, answers
-
     print("🔧 Building embeddings from scratch...")
 
-    if model is None:
-        model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    # Load model only for building
+    local_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
     texts = load_seed_data()
-    answers = np.array(texts)
+    local_answers = np.array(texts)
 
-    embeddings = model.encode(
+    embeddings = local_model.encode(
         texts,
         convert_to_numpy=True,
         show_progress_bar=True
     ).astype("float32")
 
     dim = embeddings.shape[1]
-    index = faiss.IndexFlatL2(dim)
-    index.add(embeddings)
+    local_index = faiss.IndexFlatL2(dim)
+    local_index.add(embeddings)
 
-    # Persist to disk (HF Spaces allows this)
-    np.save(ANSWERS_PATH, answers)
-    faiss.write_index(index, str(FAISS_INDEX_PATH))
+    # Persist to disk
+    np.save(ANSWERS_PATH, local_answers)
+    faiss.write_index(local_index, str(FAISS_INDEX_PATH))
 
-    print("✅ Embeddings built and saved")
+    print("✅ Embeddings built and saved to disk")
+
 
 # -----------------------------
-# Load or build resources
+# Application Lifespan (The critical fix!)
 # -----------------------------
-def load_resources():
-    global model, index, answers
-
-    if model is None:
-        model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # This runs BEFORE the application starts accepting requests (STARTUP)
+    global model_instance, faiss_index_instance, answers_array_instance
+    
+    # 1. Load the sentence transformer model (heavy)
+    print("⏳ Loading Sentence Transformer Model...")
+    model_instance = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    
+    # 2. Check for embeddings and build if necessary (heavy)
     if not FAISS_INDEX_PATH.exists() or not ANSWERS_PATH.exists():
         build_embeddings()
-    else:
-        if index is None:
-            index = faiss.read_index(str(FAISS_INDEX_PATH))
-        if answers is None:
-            answers = np.load(ANSWERS_PATH, allow_pickle=True)
+
+    # 3. Load the FAISS index and Answers (heavy)
+    print("⏳ Loading FAISS Index and Answers...")
+    faiss_index_instance = faiss.read_index(str(FAISS_INDEX_PATH))
+    answers_array_instance = np.load(ANSWERS_PATH, allow_pickle=True)
+    
+    print("🎉 All heavy resources loaded. App is ready.")
+
+    # Store resources in app.state for access in endpoints
+    app.state.model = model_instance
+    app.state.index = faiss_index_instance
+    app.state.answers = answers_array_instance
+    
+    yield # Application starts receiving requests after this line
+
+    # This runs when the application is shutting down (SHUTDOWN)
+    print("👋 Shutting down application...")
+
 
 # -----------------------------
-# Health check
+# FastAPI app initialization
+# -----------------------------
+app = FastAPI(
+    title="Customer Support Semantic Search API",
+    description="FastAPI + FAISS semantic search (HF Spaces friendly)",
+    version="1.3",
+    lifespan=lifespan # Attach the lifespan context manager
+)
+
+# -----------------------------
+# Request model
+# -----------------------------
+class QueryRequest(BaseModel):
+    query: str
+    top_k: int = 3
+
+# -----------------------------
+# Health check (will now wait for lifespan to complete)
 # -----------------------------
 @app.get("/")
 def root():
+    # The health check can now be guaranteed to run after model is loaded
     return {"status": "Customer Support Semantic Search API is running"}
 
 # -----------------------------
-# Search endpoint
+# Search endpoint (Simplified: Resources are guaranteed to be loaded)
 # -----------------------------
 @app.post("/search")
 def search(req: QueryRequest):
-    load_resources()
+    # Retrieve resources from app.state (guaranteed to be loaded)
+    model = app.state.model
+    index = app.state.index
+    answers = app.state.answers
 
     query_vector = model.encode(
         [req.query],
