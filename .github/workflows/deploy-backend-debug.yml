@@ -23,12 +23,11 @@ jobs:
         uses: actions/checkout@v3
 
       # 2. DEBUG STEP: List files before cloning to confirm existence
+
       - name: 'DEBUG: Verify local source files exist'
         run: |
           echo "--- Listing contents of the 'backend/' directory in the runner: ---"
           ls -al backend/
-          echo "--- Listing contents of the root requirements file: ---"
-          ls -al requirements.txt
 
       - name: Clone HF backend Space (authenticated)
         run: |
@@ -36,26 +35,14 @@ jobs:
           git clone https://:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Alex-Khol/${TARGET}
 
       # 3. DEBUG SYNC: Use explicit cp and robust rsync for all necessary files
-      - name: Sync Backend Files to HF Space (DEBUG MODE)
-        run: |
-          SPACE_DIR="${{ env.HF_SPACE_NAME }}"
-          
-          # Force copy of the root requirements file (Docker needs this in the root)
-          cp ./requirements.txt "${SPACE_DIR}/requirements.txt"
-          
-          # Use rsync to copy all contents of the backend/ directory (including Dockerfile)
-          # into the root of the Space clone.
-          rsync -av --delete \
-            --exclude '.git' \
-            --exclude 'README.md' \
-            ./backend/ "${SPACE_DIR}/"
 
-      - name: Sync Backend Files (Simplified)
+      - name: Sync Backend Files (Simplified and Fixed)
         run: |
           SPACE_DIR="${{ env.HF_SPACE_NAME }}"
           
-          # We no longer need the separate 'cp' step since requirements.txt is in backend/
-          # Now, the rsync command handles all files at once.
+          # This step correctly copies all contents of the backend/ directory (including
+          # Dockerfile and requirements.txt) into the root of the cloned Space,
+          # while safely excluding the large binary files.
           rsync -av --delete \
             --exclude '.git' \
             --exclude 'README.md' \
