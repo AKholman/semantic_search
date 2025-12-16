@@ -7,13 +7,14 @@ from sentence_transformers import SentenceTransformer
 from pathlib import Path
 import numpy as np
 import faiss
+import traceback
 
 # -----------------------------
 # FastAPI app
 # -----------------------------
 app = FastAPI(
     title="Customer Support Semantic Search API",
-    version="1.3",
+    version="1.4",
 )
 
 # -----------------------------
@@ -31,6 +32,8 @@ EMBEDDINGS_DIR = BASE_DIR / "embeddings"
 ANSWERS_PATH = EMBEDDINGS_DIR / "answers.npy"
 FAISS_INDEX_PATH = EMBEDDINGS_DIR / "faiss_index.index"
 
+EMBEDDINGS_DIR.mkdir(parents=True, exist_ok=True)
+
 # -----------------------------
 # Globals
 # -----------------------------
@@ -39,7 +42,48 @@ index = None
 answers = None
 
 # -----------------------------
-# Startup event (CRITICAL)
+# Seed data (replace later)
+# -----------------------------
+def load_seed_data():
+    return [
+        "You can reset your password from the settings page.",
+        "Our support team is available 24/7 via email.",
+        "Refunds are processed within 5–7 business days.",
+        "You can update your billing information in your account dashboard.",
+        "Please contact support if you encounter login issues."
+    ]
+
+# -----------------------------
+# Build embeddings (SAFE)
+# -----------------------------
+def build_embeddings():
+    global model, index, answers
+
+    print("🔧 Rebuilding FAISS index inside HF Space...")
+
+    if model is None:
+        model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+
+    texts = load_seed_data()
+    answers = np.array(texts)
+
+    embeddings = model.encode(
+        texts,
+        convert_to_numpy=True,
+        show_progress_bar=True
+    ).astype("float32")
+
+    dim = embeddings.shape[1]
+    index = faiss.IndexFlatL2(dim)
+    index.add(embeddings)
+
+    np.save(ANSWERS_PATH, answers)
+    faiss.write_index(index, str(FAISS_INDEX_PATH))
+
+    print("✅ FAISS index rebuilt successfully")
+
+# -----------------------------
+# Startup hook (CRITICAL)
 # -----------------------------
 @app.on_event("startup")
 def startup_event():
@@ -50,19 +94,22 @@ def startup_event():
     print("⏳ Loading SentenceTransformer model...")
     model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
-    print("⏳ Loading FAISS index and answers...")
-    if not FAISS_INDEX_PATH.exists() or not ANSWERS_PATH.exists():
-        raise RuntimeError(
-            "❌ Embeddings not found. Ensure embeddings/ exists in the Space."
-        )
+    try:
+        print("⏳ Attempting to load FAISS index...")
+        index = faiss.read_index(str(FAISS_INDEX_PATH))
+        answers = np.load(ANSWERS_PATH, allow_pickle=True)
+        print("✅ FAISS index loaded successfully")
 
-    index = faiss.read_index(str(FAISS_INDEX_PATH))
-    answers = np.load(ANSWERS_PATH, allow_pickle=True)
+    except Exception as e:
+        print("⚠️ Failed to load FAISS index (expected on HF Spaces)")
+        print(str(e))
+        traceback.print_exc()
+        build_embeddings()
 
-    print("✅ Backend ready to serve requests")
+    print("🎉 Backend is healthy and ready")
 
 # -----------------------------
-# Health check (HF needs this)
+# Health check (HF REQUIRED)
 # -----------------------------
 @app.get("/")
 def health():
