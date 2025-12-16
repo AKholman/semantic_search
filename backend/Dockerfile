@@ -13,4 +13,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 EXPOSE 8000
-CMD ["uvicorn", "app_core:app", "--host", "0.0.0.0", "--port", "8000", "--timeout 120"]
+# FIX: Removed the invalid '--timeout 120' flag. 
+# The lifespan manager in app_core.py handles the startup time.
+CMD ["uvicorn", "app_core:app", "--host", "0.0.0.0", "--port", "8000"]
