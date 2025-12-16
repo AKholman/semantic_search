@@ -55,12 +55,12 @@ iface = gr.Interface(
             label="Top K Results (Number of answers to retrieve)"
         )
     ],
-    
+
     # 3. The output component (must match the function return: a single string)
     outputs=gr.Textbox(
         label="Top Relevant Answers",
         lines=10,
-        show_copy_button=True
+        # REMOVED: show_copy_button=True (Unsupported in Gradio 3.50.2)
     ),
     
     # Optional arguments for UI styling
