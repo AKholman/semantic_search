@@ -41,7 +41,6 @@ __pycache__/
 # ------------------------------------
 .vscode/
 .idea/
-.DS_Store
 
 # ------------------------------------
 # 5. Build and Distribution Artifacts
@@ -50,3 +49,11 @@ dist/
 build/
 *.egg-info/
 NLP_customer_support.ipynb
+
+# macOS
+.DS_Store
+
+# Embeddings / vector indexes
+embeddings/
+*.npy
+*.index

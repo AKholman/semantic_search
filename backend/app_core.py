@@ -1,70 +1,138 @@
 # backend/app_core.py
+
 from fastapi import FastAPI
 from pydantic import BaseModel
 import numpy as np
 import faiss
 from sentence_transformers import SentenceTransformer
+from pathlib import Path
 import os
 
-# --- Define request model ---
+# -----------------------------
+# FastAPI app
+# -----------------------------
+app = FastAPI(
+    title="Customer Support Semantic Search API",
+    description="FastAPI + FAISS semantic search (HF Spaces friendly)",
+    version="1.2",
+)
+
+# -----------------------------
+# Request model
+# -----------------------------
 class QueryRequest(BaseModel):
     query: str
     top_k: int = 3
 
-# --- Initialize FastAPI ---
-app = FastAPI(
-    title="Customer Support Semantic Search API",
-    description="Lightweight FastAPI + FAISS app for semantic search.",
-    version="1.1",
-)
+# -----------------------------
+# Paths (HF Spaces persistent storage)
+# -----------------------------
+BASE_DIR = Path(__file__).resolve().parent
+EMBEDDINGS_DIR = BASE_DIR / "embeddings"
+ANSWERS_PATH = EMBEDDINGS_DIR / "answers.npy"
+FAISS_INDEX_PATH = EMBEDDINGS_DIR / "faiss_index.index"
 
-# --- Lazy-loaded resources ---
+# Ensure directory exists
+EMBEDDINGS_DIR.mkdir(parents=True, exist_ok=True)
+
+# -----------------------------
+# Lazy-loaded globals
+# -----------------------------
 model = None
 index = None
 answers = None
 
-# --- Define paths ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-EMBEDDINGS_DIR = os.path.join(BASE_DIR, "embeddings")
-answers_path = os.path.join(EMBEDDINGS_DIR, "answers.npy")
-faiss_index_path = os.path.join(EMBEDDINGS_DIR, "faiss_index.index")
+# -----------------------------
+# Example seed data (replace later)
+# -----------------------------
+def load_seed_data():
+    """
+    Replace this with:
+    - Wikidata
+    - FAQ CSV
+    - Database
+    - JSON knowledge base
+    """
+    return [
+        "You can reset your password from the settings page.",
+        "Our support team is available 24/7 via email.",
+        "Refunds are processed within 5–7 business days.",
+        "You can update your billing information in your account dashboard.",
+        "Please contact support if you encounter login issues."
+    ]
 
-# --- Root endpoint ---
-@app.get("/")
-def read_root():
-    return {"message": "Customer Support Semantic Search API is running."}
-
-
-# --- Helper to load model and data on first request ---
-def load_resources():
+# -----------------------------
+# Build embeddings (RUNS ONCE)
+# -----------------------------
+def build_embeddings():
     global model, index, answers
+
+    print("🔧 Building embeddings from scratch...")
+
     if model is None:
         model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-    if index is None:
-        index = faiss.read_index(faiss_index_path)
-    if answers is None:
-        answers = np.load(answers_path, allow_pickle=True)
 
+    texts = load_seed_data()
+    answers = np.array(texts)
 
-# --- Search endpoint ---
+    embeddings = model.encode(
+        texts,
+        convert_to_numpy=True,
+        show_progress_bar=True
+    ).astype("float32")
+
+    dim = embeddings.shape[1]
+    index = faiss.IndexFlatL2(dim)
+    index.add(embeddings)
+
+    # Persist to disk (HF Spaces allows this)
+    np.save(ANSWERS_PATH, answers)
+    faiss.write_index(index, str(FAISS_INDEX_PATH))
+
+    print("✅ Embeddings built and saved")
+
+# -----------------------------
+# Load or build resources
+# -----------------------------
+def load_resources():
+    global model, index, answers
+
+    if model is None:
+        model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+
+    if not FAISS_INDEX_PATH.exists() or not ANSWERS_PATH.exists():
+        build_embeddings()
+    else:
+        if index is None:
+            index = faiss.read_index(str(FAISS_INDEX_PATH))
+        if answers is None:
+            answers = np.load(ANSWERS_PATH, allow_pickle=True)
+
+# -----------------------------
+# Health check
+# -----------------------------
+@app.get("/")
+def root():
+    return {"status": "Customer Support Semantic Search API is running"}
+
+# -----------------------------
+# Search endpoint
+# -----------------------------
 @app.post("/search")
 def search(req: QueryRequest):
-    # Ensure resources are loaded
     load_resources()
 
-    # Encode query
-    query_vector = model.encode([req.query], convert_to_numpy=True).astype("float32")
+    query_vector = model.encode(
+        [req.query],
+        convert_to_numpy=True
+    ).astype("float32")
 
-    # Search FAISS index
     distances, indices = index.search(query_vector, req.top_k)
-    indices_list = indices[0].tolist()
-    distances_list = distances[0].tolist()
 
-    # Map indices to actual answer texts
-    results = [answers[i] for i in indices_list]
+    results = [answers[i] for i in indices[0]]
 
     return {
         "query": req.query,
         "results": results,
-        "distances": distances_list,
+        "distances": distances[0].tolist(),
     }
