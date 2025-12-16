@@ -58,6 +58,16 @@ jobs:
           cd ${{ env.HF_SPACE_NAME }}
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
+          
+          # Add all files copied in the previous step
           git add .
-          git diff --quiet || git commit -m "Deploy Gradio frontend (Debug Run)"
-          git push
+          
+          # Use this simple logic: if diff finds any changes, commit them.
+          # If no changes, the command exits gracefully.
+          if git diff --staged --quiet; then
+              echo "No changes detected to commit."
+          else
+              git commit -m "Deploy Gradio frontend (Debug Run)"
+              git push
+              echo "Successfully committed and pushed changes."
+          fi
