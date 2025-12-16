@@ -45,7 +45,7 @@ jobs:
             --exclude 'README.md' \
             --exclude 'embeddings/answers.npy' \
             --exclude 'embeddings/faiss_index.index' \
-            --exclude 'embeddings/' \ # <--- ADD THIS LINE
+            --exclude 'embeddings/' \
             ./backend/ "${SPACE_DIR}/"
 
       - name: 'DEBUG: Verify files exist in cloned Space'
