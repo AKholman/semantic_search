@@ -40,14 +40,12 @@ jobs:
         run: |
           SPACE_DIR="${{ env.HF_SPACE_NAME }}"
           
-          # This step correctly copies all contents of the backend/ directory (including
-          # Dockerfile and requirements.txt) into the root of the cloned Space,
-          # while safely excluding the large binary files.
           rsync -av --delete \
             --exclude '.git' \
             --exclude 'README.md' \
             --exclude 'embeddings/answers.npy' \
             --exclude 'embeddings/faiss_index.index' \
+            --exclude 'embeddings/' \ # <--- ADD THIS LINE
             ./backend/ "${SPACE_DIR}/"
 
       - name: 'DEBUG: Verify files exist in cloned Space'
