@@ -50,6 +50,19 @@ jobs:
             --exclude 'README.md' \
             ./backend/ "${SPACE_DIR}/"
 
+      - name: Sync Backend Files (Simplified)
+        run: |
+          SPACE_DIR="${{ env.HF_SPACE_NAME }}"
+          
+          # We no longer need the separate 'cp' step since requirements.txt is in backend/
+          # Now, the rsync command handles all files at once.
+          rsync -av --delete \
+            --exclude '.git' \
+            --exclude 'README.md' \
+            --exclude 'embeddings/answers.npy' \
+            --exclude 'embeddings/faiss_index.index' \
+            ./backend/ "${SPACE_DIR}/"
+
       - name: 'DEBUG: Verify files exist in cloned Space'
         run: |
           ls -al ${{ env.HF_SPACE_NAME }}/
