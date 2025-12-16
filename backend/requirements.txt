@@ -5,4 +5,4 @@ uvicorn[standard]
 # --- NLP & embeddings ---
 sentence-transformers
 numpy
-faiss-cpu
+faiss-cpu==1.13.1
