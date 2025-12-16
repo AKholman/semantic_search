@@ -1,4 +1,4 @@
-# app.py (Frontend) app file
+# app.py (Frontend)
 
 import gradio as gr
 import requests
