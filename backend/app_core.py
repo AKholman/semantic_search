@@ -44,7 +44,7 @@ def load_seed_data():
     ]
 
 # -----------------------------
-# Build embeddings (RUNS ONLY IF FILES ARE MISSING)
+# Build embeddings (RUNS ONLY IF FILES ARE MISSING - NOW DISABLED)
 # -----------------------------
 def build_embeddings():
     print("🔧 Building embeddings from scratch...")
@@ -84,15 +84,26 @@ async def lifespan(app: FastAPI):
     print("⏳ Loading Sentence Transformer Model...")
     model_instance = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
     
-    # 2. Check for embeddings and build if necessary (heavy)
+    # 2. Check for embeddings and build if necessary (heavy) - COMMENTED OUT
+    # This logic is DISABLED because the files must be manually uploaded to avoid startup timeouts.
+    """
     if not FAISS_INDEX_PATH.exists() or not ANSWERS_PATH.exists():
         build_embeddings()
+    """
 
     # 3. Load the FAISS index and Answers (heavy)
     print("⏳ Loading FAISS Index and Answers...")
-    faiss_index_instance = faiss.read_index(str(FAISS_INDEX_PATH))
-    answers_array_instance = np.load(ANSWERS_PATH, allow_pickle=True)
     
+    # This will now fail fast if the manual upload hasn't been completed.
+    try:
+        faiss_index_instance = faiss.read_index(str(FAISS_INDEX_PATH))
+        answers_array_instance = np.load(ANSWERS_PATH, allow_pickle=True)
+    except Exception as e:
+        print(f"FATAL ERROR: Could not load embeddings. Ensure files are manually uploaded. Error: {e}")
+        # Re-raise the exception to force the container to fail the startup health check
+        raise RuntimeError("Missing pre-generated embedding files.") from e
+
+
     print("🎉 All heavy resources loaded. App is ready.")
 
     # Store resources in app.state for access in endpoints
