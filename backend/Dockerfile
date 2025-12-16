@@ -10,8 +10,6 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-# --- NEW STEP: Check FAISS Version ---
-RUN python -c "import faiss; print(f'FAISS Version: {faiss.__version__}')"
 # -------------------------------------
 
 COPY . .
