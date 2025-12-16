@@ -1,4 +1,4 @@
-# backend/app_core.py  
+# backend/app_core.py  app core file
 
 from fastapi import FastAPI
 from pydantic import BaseModel
