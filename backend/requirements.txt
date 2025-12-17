@@ -1,13 +1,11 @@
-# Core
+#requirements.txt
+
+# --- Core app dependencies ---
 fastapi
 uvicorn[standard]
 
-# ML / NLP
-numpy
+# --- NLP & embeddings ---
 sentence-transformers
-
-# FAISS (CPU)
+numpy
 faiss-cpu==1.13.1
 
-# Torch (explicit CPU build)
-torch>=2.0.0
