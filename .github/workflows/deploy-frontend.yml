@@ -1,0 +1,73 @@
+name: Debug Deploy Frontend Only (Manual)
+
+# 1. Manual Trigger: Allows you to run this from the GitHub Actions UI
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      # Also trigger on changes to the frontend directory
+      - frontend/**
+
+env:
+  # This MUST match the space name for your Gradio frontend
+  HF_SPACE_NAME: nlp-semantic-search-frontend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. DEBUG STEP: List files before cloning to confirm existence
+      - name: 'DEBUG: Verify local source files exist'
+        run: |
+          echo "--- Listing contents of the 'frontend/' directory in the runner: ---"
+          ls -al frontend/
+          echo "--- Listing contents of requirements files: ---"
+          ls -al frontend/frontend_requirements.txt
+
+      - name: Clone HF frontend Space (authenticated)
+        run: |
+          TARGET="${{ env.HF_SPACE_NAME }}"
+          git clone https://:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Alex-Khol/${TARGET}
+
+      # 3. DEBUG SYNC: Use a more verbose and explicit rsync command
+      - name: Sync Frontend Files to HF Space (DEBUG MODE)
+        run: |
+          SPACE_DIR="${{ env.HF_SPACE_NAME }}"
+          
+          # Force copy of the main app files first, ignoring the local README.md
+          cp ./frontend/app.py "${SPACE_DIR}/app.py"
+          cp ./frontend/frontend_requirements.txt "${SPACE_DIR}/requirements.txt"
+          
+          # Use rsync for other files, excluding README.md and .git
+          rsync -av --delete \
+            --exclude '.git' \
+            --exclude 'README.md' \
+            ./frontend/ "${SPACE_DIR}/"
+
+      - name: 'DEBUG: Verify files exist in cloned Space'
+        run: |
+          ls -al ${{ env.HF_SPACE_NAME }}/
+
+      - name: Commit and push to HF
+        run: |
+          cd ${{ env.HF_SPACE_NAME }}
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          
+          # Add all files copied in the previous step
+          git add .
+          
+          # Use this simple logic: if diff finds any changes, commit them.
+          # If no changes, the command exits gracefully.
+          if git diff --staged --quiet; then
+              echo "No changes detected to commit."
+          else
+              git commit -m "Deploy Gradio frontend (Debug Run)"
+              git push
+              echo "Successfully committed and pushed changes."
+          fi
