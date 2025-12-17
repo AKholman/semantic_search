@@ -1,4 +1,3 @@
-# backend/app_core.py  app core file
 # backend/app_core.py
 
 from fastapi import FastAPI
@@ -8,13 +7,14 @@ from pathlib import Path
 import numpy as np
 import faiss
 import traceback
+import os
 
 # -----------------------------
 # FastAPI app
 # -----------------------------
 app = FastAPI(
     title="Customer Support Semantic Search API",
-    version="1.4",
+    version="1.5",
 )
 
 # -----------------------------
@@ -25,14 +25,15 @@ class QueryRequest(BaseModel):
     top_k: int = 3
 
 # -----------------------------
-# Paths
+# Paths (Render-safe)
 # -----------------------------
 BASE_DIR = Path(__file__).resolve().parent
-EMBEDDINGS_DIR = BASE_DIR / "embeddings"
-ANSWERS_PATH = EMBEDDINGS_DIR / "answers.npy"
-FAISS_INDEX_PATH = EMBEDDINGS_DIR / "faiss_index.index"
+DATA_DIR = BASE_DIR / "embeddings"
 
-EMBEDDINGS_DIR.mkdir(parents=True, exist_ok=True)
+ANSWERS_PATH = DATA_DIR / "answers.npy"
+FAISS_INDEX_PATH = DATA_DIR / "faiss_index.index"
+
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # -----------------------------
 # Globals
@@ -54,12 +55,12 @@ def load_seed_data():
     ]
 
 # -----------------------------
-# Build embeddings (SAFE)
+# Build embeddings (Render-safe)
 # -----------------------------
 def build_embeddings():
     global model, index, answers
 
-    print("🔧 Rebuilding FAISS index inside HF Space...")
+    print("🔧 Building FAISS index on Render...")
 
     if model is None:
         model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
@@ -67,51 +68,48 @@ def build_embeddings():
     texts = load_seed_data()
     answers = np.array(texts)
 
-    embeddings = model.encode(
+    vectors = model.encode(
         texts,
         convert_to_numpy=True,
         show_progress_bar=True
     ).astype("float32")
 
-    dim = embeddings.shape[1]
-    index = faiss.IndexFlatL2(dim)
-    index.add(embeddings)
+    index = faiss.IndexFlatL2(vectors.shape[1])
+    index.add(vectors)
 
     np.save(ANSWERS_PATH, answers)
     faiss.write_index(index, str(FAISS_INDEX_PATH))
 
-    print("✅ FAISS index rebuilt successfully")
+    print("✅ FAISS index ready")
 
 # -----------------------------
-# Startup hook (CRITICAL)
+# Startup event
 # -----------------------------
 @app.on_event("startup")
 def startup_event():
     global model, index, answers
 
-    print("🚀 FastAPI startup initiated")
+    print("🚀 Backend startup")
 
-    print("⏳ Loading SentenceTransformer model...")
     model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
     try:
-        print("⏳ Attempting to load FAISS index...")
+        print("⏳ Loading FAISS index...")
         index = faiss.read_index(str(FAISS_INDEX_PATH))
         answers = np.load(ANSWERS_PATH, allow_pickle=True)
-        print("✅ FAISS index loaded successfully")
+        print("✅ Loaded existing index")
 
-    except Exception as e:
-        print("⚠️ Failed to load FAISS index (expected on HF Spaces)")
-        print(str(e))
+    except Exception:
+        print("⚠️ Index not found or incompatible, rebuilding")
         traceback.print_exc()
         build_embeddings()
 
-    print("🎉 Backend is healthy and ready")
+    print("🎉 Backend ready")
 
 # -----------------------------
-# Health check (HF REQUIRED)
+# Health check (Render REQUIRED)
 # -----------------------------
-@app.get("/")
+@app.get("/health")
 def health():
     return {"status": "ok"}
 
@@ -132,7 +130,6 @@ def search(req: QueryRequest):
         "results": [answers[i] for i in indices[0]],
         "distances": distances[0].tolist(),
     }
-
 
 
 
